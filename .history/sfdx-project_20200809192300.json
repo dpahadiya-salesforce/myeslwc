@@ -6,7 +6,7 @@
     },
     {
       "path": "es-base-styles",
-      "default": false
+      "default": true
     }
   ],
   "namespace": "",

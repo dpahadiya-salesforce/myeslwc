@@ -1,12 +1,8 @@
 {
   "packageDirectories": [
     {
-      "path": "es-base-objects",
+      "path": "force-app",
       "default": true
-    },
-    {
-      "path": "es-base-styles",
-      "default": false
     }
   ],
   "namespace": "",
