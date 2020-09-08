@@ -1,15 +1,61 @@
 import { LightningElement, api, wire } from 'lwc';
+import { refreshApex } from '@salesforce/apex';
 import getCustomerList from '@salesforce/apex/reservationManagerController.getCustomerList';
 
+import TILE_SELECTION_MC from '@salesforce/messageChannel/Tile_Selection__c';
+import FLOW_STATUS_CHANGE_MC from '@salesforce/messageChannel/Flow_Status_Change__c';
+import {
+    subscribe,
+    unsubscribe,
+    APPLICATION_SCOPE,
+    MessageContext,
+    publish
+} from 'lightning/messageService'
+
 export default class CustomerList extends LightningElement {
-
+    //@api sobject = 'Lead';
+    @api sobject;
     customers = [];
-
-    @api sobject = 'Lead';
     errorMsg;
     msgForUser;
     wiredRecords;
 
+    @wire(MessageContext)
+    messageContext;
+
+    subscribeToMessageChannel() {
+        this.subscription = subscribe(
+            this.messageContext,
+            FLOW_STATUS_CHANGE_MC,
+            (message) => this.handleMessage(message),
+            { scope: APPLICATION_SCOPE }
+        );
+    }
+
+    unsubscribeToMessageChannel() {
+        unsubscribe(this.subscription);
+        this.subscription = null;
+    }
+
+    handleMessage(message) {
+        if (
+            message.flowName === 'createReservation' &&
+            message.status === 'FINISHED' &&
+            message.state
+        ) {
+            if (message.state.sobjecttype === this.sobject) {
+                refreshApex(this.wiredRecords);
+            }
+        }
+    }
+
+    connectedCallback(){
+        this.subscribeToMessageChannel();
+    }
+
+    disconnectedCallback(){
+        this.unsubscribeToMessageChannel();
+    }
 
     @wire(getCustomerList, { sObjectType: '$sobject' })
     wiredCustomerData(value) {
@@ -23,8 +69,13 @@ export default class CustomerList extends LightningElement {
         }
     }
 
-    handleSelect(event) {
-        console.log(event.detail);
+    publishSelect(event){
+        const payload = {tileType : 'customer', properties : event.detail};
+        publish(this.messageContext, TILE_SELECTION_MC, payload);
     }
+
+    /*handleSelect(event) {
+        console.log(event.detail);
+    }*/
     
 }
